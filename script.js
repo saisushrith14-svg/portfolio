@@ -185,519 +185,396 @@
   }
 
   // --------------------------------------------------------------------------
-  // 6. GENERATIVE PARTICLE ARTWORK ENGINE (Canvas 2D)
-  //    - Stage 0: Anatomical Silhouette Bust + Interactive Celestial Orb
-  //    - Stages 1-7: Scroll-driven deterministic mathematical morphing
+  // 6. THREE.JS GENERATIVE PARTICLE ARTWORK ENGINE
+  //    - 52,000 Particle Anatomical Humanoid Bust Silhouette (Daniel Ingrassia Reference)
+  //    - Interactive Celestial Glowing Light Orb with 3D Head Tilt & Dynamic Repulsion
+  //    - Scroll-linked progressive dispersion into architectural background
   // --------------------------------------------------------------------------
-  const canvas = document.getElementById('generative-canvas');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  // Responsive Particle Density
-  const isMobile = window.innerWidth <= 768;
-  const PARTICLE_COUNT = isMobile ? 480 : 1200;
-
-  if (hudParticlesElem) {
-    hudParticlesElem.textContent = `PARTICLES: ${PARTICLE_COUNT.toLocaleString()} VTX`;
+  const container = document.getElementById('threejs-particle-scene');
+  if (container && typeof THREE !== 'undefined') {
+    initThreeHumanoidBust();
   }
 
-  let width = 0;
-  let height = 0;
-  let dpr = 1;
+  function initThreeHumanoidBust() {
+    let width = container.clientWidth || window.innerWidth;
+    let height = container.clientHeight || window.innerHeight;
 
-  function resizeCanvas() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    ctx.scale(dpr, dpr);
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas, { passive: true });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(0, 5, 205);
 
-  // --------------------------------------------------------------------------
-  // Mathematical Geometry Generators for Multi-Stage Morphing
-  // --------------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    container.appendChild(renderer.domElement);
 
-  // Helper random functions
-  function pseudoRand(seed) {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  }
+    // 52,000 fine stippled monochromatic particles sculpting the human silhouette
+    const particleCount = 52000;
+    const positions = new Float32Array(particleCount * 3);
+    const initialPositions = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
+    const opacities = new Float32Array(particleCount);
 
-  // STAGE 0: Anatomical Bust Silhouette
-  // Based on the approved starting screen specification:
-  // Cranium, jawline, nose bridge, eyes, mouth, neck, trapezius slope & deltoids
-  function generateBustPoint(i, count) {
-    const u = i / count;
-    let x = 0, y = 0, z = 0;
+    if (hudParticlesElem) {
+      hudParticlesElem.textContent = `PARTICLES: ${particleCount.toLocaleString()} VTX`;
+    }
 
-    if (u < 0.40) {
-      // 1. Head & Facial Features (y from 0 to 42, centered ~22)
-      const curY = (u / 0.40) * 44;
-      let radX, radZ;
-      if (curY > 16) {
-        // Cranium / Temples
-        const t = (curY - 16) / 28;
-        radX = 22 * Math.sqrt(Math.max(0.02, 1.0 - Math.pow(t - 0.45, 2) * 1.5));
-        radZ = 24 * Math.sqrt(Math.max(0.02, 1.0 - Math.pow(t - 0.35, 2) * 1.4));
-      } else {
-        // Jawline & Chin
-        const t = curY / 16;
-        radX = 8.5 + t * 13.5;
-        radZ = 12.0 + t * 12.0;
-      }
+    function rand(min, max) { return min + Math.random() * (max - min); }
+    function randGauss() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
 
-      const angle = (i * 2.39996) % (Math.PI * 2);
-      const shell = 0.75 + 0.25 * pseudoRand(i * 3.1);
-      x = Math.cos(angle) * radX * shell;
-      y = curY;
-      z = Math.sin(angle) * radZ * shell;
+    // Sculpt accurate anatomical silhouette: cranium, face, curly hair crown, neck, trapezius, shoulders
+    for (let i = 0; i < particleCount; i++) {
+      let x = 0, y = 0, z = 0;
+      let pSize = rand(1.0, 2.2);
+      let pOpacity = rand(0.35, 0.95);
 
-      // Facial contour sculpting in front quadrant
-      if (z > 0) {
-        // Eye socket recession
-        if (curY > 18 && curY < 24 && Math.abs(x) < 14) {
-          if (Math.abs(x) > 3 && Math.abs(x) < 11) z -= 2.0;
+      const region = Math.random();
+
+      if (region < 0.35) {
+        // 1. ANATOMICAL HEAD & FACE (Cranium, temples, jaw, chin, cheeks, nose, eye sockets)
+        const vY = rand(0, 1);
+        const curY = 0 + vY * 38; // 0 to 38
+        
+        let radX, radZ;
+        if (curY > 16) {
+          // Cranium / upper face
+          const t = (curY - 16) / 22;
+          radX = 21.5 * Math.sqrt(Math.max(0.01, 1.0 - Math.pow(t - 0.4, 2) * 1.5));
+          radZ = 23.5 * Math.sqrt(Math.max(0.01, 1.0 - Math.pow(t - 0.3, 2) * 1.4));
+        } else {
+          // Lower face, jawline & chin tapering down
+          const t = (curY - 0) / 16;
+          radX = 8.5 + t * 13.0;
+          radZ = 12.0 + t * 11.5;
         }
-        // Nose bridge & tip
-        if (curY >= 9 && curY <= 19 && Math.abs(x) < 4.5) {
-          const noseProf = Math.sin(((curY - 9) / 10) * Math.PI);
-          z += noseProf * 4.8 * Math.exp(-Math.pow(x / 2.2, 2));
-        }
-        // Mouth
-        if (curY >= 5 && curY <= 8 && Math.abs(x) < 6) {
-          z += 1.4 * Math.exp(-Math.pow(x / 3.0, 2));
-        }
-        // Chin
-        if (curY <= 4 && Math.abs(x) < 4.5) {
-          z += 2.6 * Math.exp(-Math.pow(x / 3.0, 2));
-        }
-      }
-    } else if (u < 0.65) {
-      // 2. Crown & Silhouette Hair
-      const h = 15 + ((u - 0.40) / 0.25) * 36;
-      const normH = (h - 15) / 36;
-      const angle = (i * 1.618) % (Math.PI * 2);
-      const baseR = 21.0 + Math.sin(normH * Math.PI) * 5.5;
-      const curl = Math.sin(angle * 12.0 + h * 0.4) * 3.0 + Math.cos(angle * 16.0) * 2.0;
-      const finalR = baseR + curl;
 
-      x = Math.cos(angle) * finalR;
-      y = h;
-      z = Math.sin(angle) * (finalR * 0.95);
-      if (z > 8 && y < 24) z *= 0.5; // keep face open
-    } else {
-      // 3. Neck, Trapezius Slope & Deltoid Shoulders (y: 0 down to -85)
-      const t = (u - 0.65) / 0.35;
-      y = -t * 85;
+        const angle = rand(0, Math.PI * 2);
+        // Bias particles towards the visible silhouette surface shell
+        const shell = Math.pow(Math.random(), 0.18);
+        let px = Math.cos(angle) * radX * shell;
+        let py = curY;
+        let pz = Math.sin(angle) * radZ * shell;
 
-      let spanX, depthZ;
-      if (y > -16) {
-        // Neck column
-        const neckProg = -y / 16.0;
-        spanX = 11.5 + neckProg * 3.5;
-        depthZ = 13.5 + neckProg * 2.5;
-      } else {
-        // Shoulders flare
-        const shoulderT = (-16 - y) / 69.0;
-        const shoulderSpread = Math.pow(shoulderT, 0.72) * 115.0;
-        spanX = 15.0 + shoulderSpread;
-        depthZ = 20.0 * (1.0 - shoulderT * 0.25);
-      }
-
-      const side = (i % 2 === 0) ? -1 : 1;
-      const angle = (i * 3.7) % (Math.PI * 2);
-      x = side * Math.abs(Math.cos(angle)) * spanX;
-      z = Math.sin(angle) * depthZ;
-    }
-
-    // Scale and center for our 3D space
-    return {
-      x: x * 3.2,
-      y: (y - 5) * 3.2,
-      z: z * 3.2
-    };
-  }
-
-  // STAGE 1: Formation / Dispersal Grid
-  function generateStage1(i, count) {
-    const angle = (i / count) * Math.PI * 14;
-    const radius = 40 + (i / count) * 280;
-    const wave = Math.sin(i * 0.2) * 45;
-    return {
-      x: Math.cos(angle) * radius,
-      y: wave + Math.sin(angle) * 80,
-      z: Math.sin(angle) * radius * 0.5
-    };
-  }
-
-  // STAGE 2: Manifesto / Undulating Riemannian Manifold (Wave Lattice)
-  function generateStage2(i, count) {
-    const cols = Math.floor(Math.sqrt(count * 1.8));
-    const r = Math.floor(i / cols);
-    const c = i % cols;
-    const u = (c / cols - 0.5) * 700;
-    const v = (r / cols - 0.5) * 450;
-    const dist = Math.sqrt(u * u + v * v);
-    const z = Math.sin(dist * 0.035) * 75 + Math.cos(u * 0.04) * 35;
-    return { x: u, y: v, z: z };
-  }
-
-  // STAGE 3: Projects / Concentric Orbital Gyroscope
-  function generateStage3(i, count) {
-    const ring = i % 3;
-    const angle = (i / count) * Math.PI * 6;
-    let radius = 220;
-    let x = 0, y = 0, z = 0;
-
-    if (ring === 0) {
-      // Equatorial Ring
-      x = Math.cos(angle) * radius;
-      y = Math.sin(angle) * 40;
-      z = Math.sin(angle) * radius;
-    } else if (ring === 1) {
-      // Inclined Polar Ring
-      x = Math.cos(angle) * (radius * 1.15);
-      y = Math.sin(angle) * (radius * 1.15);
-      z = Math.cos(angle * 2) * 60;
-    } else {
-      // Core Shell
-      const phi = (i / count) * Math.PI;
-      const theta = (i * 2.39996) % (Math.PI * 2);
-      radius = 120;
-      x = radius * Math.sin(phi) * Math.cos(theta);
-      y = radius * Math.sin(phi) * Math.sin(theta);
-      z = radius * Math.cos(phi);
-    }
-    return { x, y, z };
-  }
-
-  // STAGE 4: Skills / Crystalline 3D Lattice Matrix
-  function generateStage4(i, count) {
-    const side = Math.floor(Math.cbrt(count));
-    const ix = i % side;
-    const iy = Math.floor(i / side) % side;
-    const iz = Math.floor(i / (side * side));
-    const spacing = 46;
-    return {
-      x: (ix - side / 2) * spacing,
-      y: (iy - side / 2) * spacing,
-      z: (iz - side / 2) * spacing
-    };
-  }
-
-  // STAGE 5: Education / Flowing Torus (Donut Ring)
-  function generateStage5(i, count) {
-    const u = (i / count) * Math.PI * 2;
-    const v = (i * 13.0) % (Math.PI * 2);
-    const R = 230; // major radius
-    const r = 65;  // minor tube radius
-    return {
-      x: (R + r * Math.cos(v)) * Math.cos(u),
-      y: (R + r * Math.cos(v)) * Math.sin(u) * 0.7,
-      z: r * Math.sin(v) * 2.0
-    };
-  }
-
-  // STAGE 6: GitHub / Planar Harmonic Grid
-  function generateStage6(i, count) {
-    const cols = Math.floor(Math.sqrt(count * 2.5));
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const spacing = 28;
-    const x = (col - cols / 2) * spacing;
-    const y = (row - 10) * spacing * 0.7;
-    const z = Math.sin(col * 0.3) * Math.cos(row * 0.3) * 60;
-    return { x, y, z };
-  }
-
-  // STAGE 7: Contact / Convergent Focal Vortex
-  function generateStage7(i, count) {
-    const angle = (i / count) * Math.PI * 18;
-    const progress = i / count;
-    const radius = 20 + Math.pow(progress, 1.6) * 320;
-    const y = (progress - 0.5) * 400;
-    return {
-      x: Math.cos(angle) * radius,
-      y: y,
-      z: Math.sin(angle) * radius
-    };
-  }
-
-  // Pre-generate target configurations for each particle
-  const stageGenerators = [
-    generateBustPoint, // 0: Landing Bust Silhouette
-    generateStage1,   // 1: Hero Formation
-    generateStage2,   // 2: Manifesto Wave
-    generateStage3,   // 3: Projects Gyroscope
-    generateStage4,   // 4: Skills Lattice
-    generateStage5,   // 5: Education Torus
-    generateStage6,   // 6: GitHub Grid
-    generateStage7    // 7: Contact Vortex
-  ];
-
-  const particles = [];
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    const targets = stageGenerators.map(gen => gen(i, PARTICLE_COUNT));
-    particles.push({
-      // Current 3D position
-      x: targets[0].x,
-      y: targets[0].y,
-      z: targets[0].z,
-      targets: targets,
-      baseSize: 0.9 + pseudoRand(i * 5.1) * 1.5,
-      alpha: 0.35 + pseudoRand(i * 7.3) * 0.65,
-      flickerOffset: pseudoRand(i * 11.2) * Math.PI * 2
-    });
-  }
-
-  // --------------------------------------------------------------------------
-  // The Celestial Glowing Orb (Interactive Light Source)
-  // --------------------------------------------------------------------------
-  const celestialOrb = {
-    x: 180,
-    y: 80,
-    z: 40,
-    targetX: 180,
-    targetY: 80,
-    baseRadius: 3.5,
-    haloRadius: 18
-  };
-
-  // Mouse / Pointer Interaction
-  const pointer = {
-    x: 0,
-    y: 0,
-    targetX: 0,
-    targetY: 0,
-    active: false
-  };
-
-  window.addEventListener('pointermove', (e) => {
-    pointer.active = true;
-    pointer.targetX = (e.clientX - width / 2);
-    pointer.targetY = -(e.clientY - height / 2);
-
-    // Orb tracks pointer smoothly in landing viewport
-    if (window.scrollY < window.innerHeight * 0.8) {
-      celestialOrb.targetX = pointer.targetX * 0.55;
-      celestialOrb.targetY = pointer.targetY * 0.55;
-    }
-  }, { passive: true });
-
-  window.addEventListener('pointerleave', () => {
-    pointer.active = false;
-    celestialOrb.targetX = 160;
-    celestialOrb.targetY = 70;
-  });
-
-  // --------------------------------------------------------------------------
-  // Render Loop & Physics
-  // --------------------------------------------------------------------------
-  let lastTime = performance.now();
-  let frameCount = 0;
-  let fpsTimer = performance.now();
-
-  // Smooth scroll tracking
-  let currentScrollFraction = 0;
-  let targetScrollFraction = 0;
-
-  function render(time) {
-    // Visibility pause optimization
-    if (document.hidden) {
-      requestAnimationFrame(render);
-      return;
-    }
-
-    // FPS Meter
-    frameCount++;
-    if (time - fpsTimer >= 1000) {
-      const fps = Math.round((frameCount * 1000) / (time - fpsTimer));
-      if (canvasFpsElem) canvasFpsElem.textContent = `${fps} FPS`;
-      if (headerFpsElem) headerFpsElem.textContent = `${fps} FPS`;
-      frameCount = 0;
-      fpsTimer = time;
-    }
-
-    const dt = Math.min((time - lastTime) / 1000, 0.1);
-    lastTime = time;
-
-    // Calculate Scroll Progress
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    targetScrollFraction = Math.min(1, Math.max(0, window.scrollY / maxScroll));
-
-    // Smooth lerp scroll fraction to avoid abrupt jumping on fast scroll
-    currentScrollFraction += (targetScrollFraction - currentScrollFraction) * 0.1;
-
-    // Determine current interpolation stages (0 to 7)
-    const stageSpan = 7;
-    const scaledProgress = currentScrollFraction * stageSpan;
-    const stageA = Math.min(stageSpan - 1, Math.floor(scaledProgress));
-    const stageB = Math.min(stageSpan, stageA + 1);
-    const stageT = scaledProgress - stageA;
-
-    // Ease stage transition (smooth step)
-    const easeT = stageT * stageT * (3 - 2 * stageT);
-
-    // Smooth pointer tracking
-    pointer.x += (pointer.targetX - pointer.x) * 0.08;
-    pointer.y += (pointer.targetY - pointer.y) * 0.08;
-
-    celestialOrb.x += (celestialOrb.targetX - celestialOrb.x) * 0.06;
-    celestialOrb.y += (celestialOrb.targetY - celestialOrb.y) * 0.06;
-
-    // 3D Camera Angles
-    const timeScale = prefersReducedMotion ? 0 : time * 0.0004;
-    let rotY = (pointer.x / width) * 0.45;
-    let rotX = -(pointer.y / height) * 0.25;
-
-    // Add continuous subtle rotation based on scroll stage
-    if (!prefersReducedMotion) {
-      rotY += timeScale + (currentScrollFraction * Math.PI * 2.5);
-    }
-
-    const cosY = Math.cos(rotY);
-    const sinY = Math.sin(rotY);
-    const cosX = Math.cos(rotX);
-    const sinX = Math.sin(rotX);
-
-    // Clear Screen
-    ctx.clearRect(0, 0, width, height);
-
-    const centerX = width / 2;
-    // In landing stage, center bust slightly higher for balanced composition
-    const landingShift = Math.max(0, 1 - currentScrollFraction * 5) * 20;
-    const centerY = (height / 2) - landingShift;
-    const fov = 650;
-
-    // Draw Celestial Orb in Landing Stage
-    const isLanding = currentScrollFraction < 0.25;
-    if (isLanding) {
-      const orbPulse = Math.sin(time * 0.003) * 0.15;
-      const orbScreenX = centerX + celestialOrb.x;
-      const orbScreenY = centerY - celestialOrb.y;
-
-      const orbFade = Math.max(0, 1 - currentScrollFraction * 4);
-
-      // Outer Halo Glow
-      const haloGrad = ctx.createRadialGradient(
-        orbScreenX, orbScreenY, 0,
-        orbScreenX, orbScreenY, celestialOrb.haloRadius * (1 + orbPulse) * 2.5
-      );
-      haloGrad.addColorStop(0, `rgba(43, 64, 253, ${0.45 * orbFade})`);
-      haloGrad.addColorStop(0.4, `rgba(10, 38, 238, ${0.18 * orbFade})`);
-      haloGrad.addColorStop(1, 'rgba(10, 38, 238, 0)');
-
-      ctx.fillStyle = haloGrad;
-      ctx.beginPath();
-      ctx.arc(orbScreenX, orbScreenY, celestialOrb.haloRadius * 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core Solid Orb
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * orbFade})`;
-      ctx.beginPath();
-      ctx.arc(orbScreenX, orbScreenY, celestialOrb.baseRadius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Process & Render Particles
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const p = particles[i];
-
-      // Interpolate target positions between Stage A and Stage B
-      const targetA = p.targets[stageA];
-      const targetB = p.targets[stageB] || targetA;
-
-      const destX = targetA.x + (targetB.x - targetA.x) * easeT;
-      const destY = targetA.y + (targetB.y - targetA.y) * easeT;
-      const destZ = targetA.z + (targetB.z - targetA.z) * easeT;
-
-      // Smooth approach to current interpolated target
-      p.x += (destX - p.x) * 0.08;
-      p.y += (destY - p.y) * 0.08;
-      p.z += (destZ - p.z) * 0.08;
-
-      let px = p.x;
-      let py = p.y;
-      let pz = p.z;
-
-      // Interactive Orb Repulsion in Landing Phase
-      if (isLanding) {
-        const dx = px - celestialOrb.x;
-        const dy = py - celestialOrb.y;
-        const dz = pz - celestialOrb.z;
-        const distSq = dx * dx + dy * dy + dz * dz;
-        const repelRadiusSq = 55 * 55;
-
-        if (distSq < repelRadiusSq && distSq > 0.1) {
-          const dist = Math.sqrt(distSq);
-          const force = (55 - dist) / 55;
-          px += (dx / dist) * force * 16;
-          py += (dy / dist) * force * 16;
-          pz += (dz / dist) * force * 16;
-        }
-      }
-
-      // 3D Rotation (Y axis then X axis)
-      const x1 = px * cosY - pz * sinY;
-      const z1 = px * sinY + pz * cosY;
-      const y2 = py * cosX - z1 * sinX;
-      const z2 = py * sinX + z1 * cosX;
-
-      // Perspective Projection
-      const depth = fov + z2 + 350;
-      if (depth > 20) {
-        const scale = fov / depth;
-        const screenX = centerX + x1 * scale;
-        const screenY = centerY - y2 * scale;
-
-        if (screenX >= -10 && screenX <= width + 10 && screenY >= -10 && screenY <= height + 10) {
-          // Dynamic alpha with depth and subtle shimmer
-          const shimmer = Math.sin(time * 0.002 + p.flickerOffset) * 0.1;
-          const depthAlpha = Math.max(0.1, Math.min(0.95, (p.alpha + shimmer) * (scale * 0.9)));
-
-          ctx.fillStyle = '#FFFFFF';
-          ctx.globalAlpha = depthAlpha;
-
-          const radius = Math.max(0.65, p.baseSize * scale);
-          ctx.beginPath();
-          ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Connect nearby particles in crystalline lattice stage
-          if (stageA === 4 && i % 3 === 0 && !isMobile) {
-            const nextP = particles[(i + 1) % PARTICLE_COUNT];
-            const ndepth = fov + nextP.z + 350;
-            if (ndepth > 20) {
-              const nscale = fov / ndepth;
-              const nsx = centerX + nextP.x * nscale;
-              const nsy = centerY - nextP.y * nscale;
-              const lineDist = Math.hypot(screenX - nsx, screenY - nsy);
-              if (lineDist < 35) {
-                ctx.strokeStyle = 'rgba(43, 64, 253, 0.25)';
-                ctx.lineWidth = 0.6;
-                ctx.beginPath();
-                ctx.moveTo(screenX, screenY);
-                ctx.lineTo(nsx, nsy);
-                ctx.stroke();
-              }
+        // Sculpt facial features in front quadrant (pz > 0)
+        if (pz > 0) {
+          // Eye sockets / Brow ridge
+          if (curY > 18 && curY < 24 && Math.abs(px) < 14) {
+            if (Math.abs(px) > 3 && Math.abs(px) < 11) {
+              pz -= 1.8;
+            }
+            if (curY > 21) {
+              pz += 1.5 * Math.exp(-Math.pow(px / 6.0, 2));
             }
           }
+
+          // Nose bridge and tip
+          if (curY >= 9 && curY <= 19 && Math.abs(px) < 4.5) {
+            const noseProfile = Math.sin(((curY - 9) / 10) * Math.PI);
+            pz += noseProfile * 4.8 * Math.exp(-Math.pow(px / 2.0, 2));
+          }
+
+          // Lips / Mouth
+          if (curY >= 5 && curY <= 8 && Math.abs(px) < 6) {
+            pz += 1.4 * Math.exp(-Math.pow(px / 3.0, 2));
+          }
+
+          // Chin projection
+          if (curY <= 4 && Math.abs(px) < 4.5) {
+            pz += 2.6 * Math.exp(-Math.pow(px / 3.0, 2));
+          }
         }
+
+        // Bilateral ears
+        if (curY > 12 && curY < 21 && Math.abs(px) > radX * 0.78 && Math.abs(pz) < 8) {
+          px += (px > 0 ? 3.0 : -3.0) * rand(0.6, 1.2);
+        }
+
+        x = px + randGauss() * 0.7;
+        y = py;
+        z = pz + randGauss() * 0.7;
+
+      } else if (region < 0.60) {
+        // 2. SIGNATURE TEXTURED CURLY HAIR SILHOUETTE
+        const h = rand(15, 48);
+        const normH = (h - 15) / 33;
+        const angle = rand(0, Math.PI * 2);
+
+        // Rounded crown envelope
+        const baseR = 21.0 + Math.sin(normH * Math.PI) * 5.2 + (normH > 0.7 ? (1.0 - normH) * 6.0 : 0);
+        // Distinct fractal curly stipple clusters
+        const curl = Math.sin(angle * 11.0 + h * 0.35) * 3.2 + Math.cos(angle * 18.0) * 2.2 + randGauss() * 1.5;
+        const finalR = baseR + curl + rand(0, 3.8);
+
+        let hx = Math.cos(angle) * finalR;
+        let hy = h + randGauss() * 1.2;
+        let hz = Math.sin(angle) * (finalR * 0.95);
+
+        // Keep face clear in front
+        if (hz > 8 && hy < 24) {
+          hz *= 0.55;
+        }
+
+        x = hx;
+        y = hy;
+        z = hz;
+        pSize = rand(1.2, 2.5);
+
+      } else if (region < 0.92) {
+        // 3. ANATOMICAL NECK, TRAPEZIUS, CLAVICLES, SHOULDERS & CHEST
+        const t = Math.random();
+        y = 0 - t * 85;
+
+        let spanX, depthZ;
+        if (y > -16) {
+          // Muscular cylindrical neck column
+          const neckProgress = -y / 16.0;
+          spanX = 11.0 + neckProgress * 3.5;
+          depthZ = 13.0 + neckProgress * 2.0;
+        } else {
+          // Natural human shoulder slope
+          const shoulderT = (-16 - y) / 69.0;
+          const shoulderSpread = Math.pow(shoulderT, 0.75) * 105.0;
+          spanX = 14.5 + shoulderSpread;
+          depthZ = 19.0 * (1.0 - shoulderT * 0.25);
+        }
+
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const perimeterBias = Math.pow(Math.random(), 0.5);
+        let sx = side * perimeterBias * spanX + randGauss() * 1.6;
+        let sz = (Math.random() - 0.5) * depthZ * 2.0;
+
+        // Clavicle ridge
+        if (y < -14 && y > -26 && sz > 2) {
+          sz += 2.8 * Math.sin(Math.min(1.0, Math.abs(sx) / 45.0) * Math.PI);
+        }
+
+        x = sx;
+        z = sz;
+
+      } else {
+        // 4. Subtle ambient celestial particulate atmosphere
+        x = rand(-135, 135);
+        y = rand(-90, 115);
+        z = rand(-70, 70);
+        pSize = rand(0.8, 1.5);
+        pOpacity = rand(0.15, 0.5);
       }
+
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
+
+      initialPositions[i * 3] = x;
+      initialPositions[i * 3 + 1] = y;
+      initialPositions[i * 3 + 2] = z;
+
+      sizes[i] = pSize;
+      opacities[i] = pOpacity;
     }
 
-    ctx.globalAlpha = 1.0;
-    requestAnimationFrame(render);
-  }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
 
-  // Start Animation Loop
-  requestAnimationFrame(render);
+    const vertexShader = `
+      attribute float size;
+      attribute float customOpacity;
+      varying float vOpacity;
+      varying vec3 vPos;
+      
+      void main() {
+        vOpacity = customOpacity;
+        vPos = position;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (235.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `;
+
+    const fragmentShader = `
+      varying float vOpacity;
+      varying vec3 vPos;
+      
+      void main() {
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        float dist = length(coord);
+        if (dist > 0.5) discard;
+        
+        // Crisp optical point with feathered stippled edge
+        float alpha = smoothstep(0.5, 0.08, dist) * vOpacity;
+        gl_FragColor = vec4(0.97, 0.98, 1.0, alpha);
+      }
+    `;
+
+    const particleMaterial = new THREE.ShaderMaterial({
+      vertexShader: vertexShader,
+      fragmentShader: fragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    const particleSystem = new THREE.Points(geometry, particleMaterial);
+    scene.add(particleSystem);
+
+    // The Iconic Glowing Celestial Orb
+    const orbGroup = new THREE.Group();
+    const orbCore = new THREE.Mesh(
+      new THREE.SphereGeometry(2.4, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.98 })
+    );
+    const orbHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(7.5, 24, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.24, blending: THREE.AdditiveBlending })
+    );
+    const orbOuter = new THREE.Mesh(
+      new THREE.SphereGeometry(15.5, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending })
+    );
+    orbGroup.add(orbCore);
+    orbGroup.add(orbHalo);
+    orbGroup.add(orbOuter);
+    scene.add(orbGroup);
+
+    // Initial position to right of head matching Daniel Ingrassia screenshot
+    orbGroup.position.set(62, 36, 18);
+
+    // Mouse Tracking
+    let targetMouseX = 0.32;
+    let targetMouseY = 0.18;
+    let currentMouseX = 0.32;
+    let currentMouseY = 0.18;
+
+    function onPointerMove(e) {
+      const rect = container.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width;
+      const py = (e.clientY - rect.top) / rect.height;
+      targetMouseX = (px - 0.5) * 2;
+      targetMouseY = -(py - 0.5) * 2;
+    }
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+
+    function onResize() {
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+    window.addEventListener('resize', onResize);
+
+    const clock = new THREE.Clock();
+    let lastFpsTime = performance.now();
+    let frames = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (document.hidden) return;
+
+      const now = performance.now();
+      frames++;
+      if (now - lastFpsTime >= 1000) {
+        const fps = Math.round((frames * 1000) / (now - lastFpsTime));
+        if (canvasFpsElem) canvasFpsElem.textContent = `${fps} FPS`;
+        if (headerFpsElem) headerFpsElem.textContent = `${fps} FPS`;
+        frames = 0;
+        lastFpsTime = now;
+      }
+
+      const time = clock.getElapsedTime();
+
+      // Scroll Progress Calculation
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const scrollFraction = Math.min(1.0, Math.max(0.0, window.scrollY / maxScroll));
+
+      // Smooth lerp mouse tracking
+      currentMouseX += (targetMouseX - currentMouseX) * 0.07;
+      currentMouseY += (targetMouseY - currentMouseY) * 0.07;
+
+      // 3D portrait head tilt & orientation (respecting reduced motion)
+      if (!prefersReducedMotion) {
+        particleSystem.rotation.y = currentMouseX * 0.25;
+        particleSystem.rotation.x = -currentMouseY * 0.12;
+
+        // Camera gentle travel on scroll
+        camera.position.z = 205 + scrollFraction * 120;
+        camera.position.y = 5 - scrollFraction * 25;
+      }
+
+      // Animate Celestial Light Orb
+      const targetOrbX = currentMouseX * 100;
+      const targetOrbY = currentMouseY * 75;
+      orbGroup.position.x += (targetOrbX - orbGroup.position.x) * 0.08;
+      orbGroup.position.y += (targetOrbY - orbGroup.position.y) * 0.08;
+      orbGroup.position.z = 20 + Math.sin(time * 2.2) * 5.5;
+
+      orbHalo.scale.setScalar(1.0 + Math.sin(time * 3.6) * 0.16);
+      orbOuter.scale.setScalar(1.0 + Math.cos(time * 2.6) * 0.12);
+
+      // Fade celestial orb slightly as user enters deep reading sections
+      const orbFade = Math.max(0.1, 1.0 - scrollFraction * 2.5);
+      orbCore.material.opacity = 0.98 * orbFade;
+      orbHalo.material.opacity = 0.24 * orbFade;
+      orbOuter.material.opacity = 0.07 * orbFade;
+
+      // Dynamic particle interaction with light orb + scroll dispersion
+      const posAttr = geometry.attributes.position;
+      const posArr = posAttr.array;
+      const invMatrix = new THREE.Matrix4().copy(particleSystem.matrixWorld).invert();
+      const localOrb = orbGroup.position.clone().applyMatrix4(invMatrix);
+
+      const step = 3;
+      const dispFactor = scrollFraction * 1.6;
+
+      for (let i = 0; i < particleCount; i += step) {
+        const idx = i * 3;
+        const ix = initialPositions[idx];
+        const iy = initialPositions[idx + 1];
+        const iz = initialPositions[idx + 2];
+
+        // Target position based on scroll dispersion
+        let tx = ix;
+        let ty = iy;
+        let tz = iz;
+
+        if (dispFactor > 0.001) {
+          const disperser = Math.sin(i * 0.05 + time * 0.5) * 12.0;
+          tx = ix + (ix * 0.8 + disperser) * dispFactor;
+          ty = iy + (iy * 0.8 + disperser) * dispFactor;
+          tz = iz + (iz * 0.8) * dispFactor;
+        }
+
+        const dx = posArr[idx] - localOrb.x;
+        const dy = posArr[idx + 1] - localOrb.y;
+        const dz = posArr[idx + 2] - localOrb.z;
+        const distSq = dx * dx + dy * dy + dz * dz;
+
+        // Repulsion radius = 36 (active in landing/top phase)
+        if (distSq < 1296 && distSq > 0.01 && scrollFraction < 0.3) {
+          const dist = Math.sqrt(distSq);
+          const force = (36.0 - dist) / 36.0;
+          posArr[idx] += (dx / dist) * force * 1.8;
+          posArr[idx + 1] += (dy / dist) * force * 1.8;
+          posArr[idx + 2] += (dz / dist) * force * 1.8;
+        } else {
+          posArr[idx] += (tx - posArr[idx]) * 0.06;
+          posArr[idx + 1] += (ty - posArr[idx + 1]) * 0.06;
+          posArr[idx + 2] += (tz - posArr[idx + 2]) * 0.06;
+        }
+      }
+      posAttr.needsUpdate = true;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  }
 
 })();
