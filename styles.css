@@ -69,7 +69,7 @@ html {
 }
 
 body {
-  background-color: var(--bg-canvas);
+  background: radial-gradient(circle at 50% 45%, #18181b 0%, #111113 70%, #0d0d0f 100%);
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
