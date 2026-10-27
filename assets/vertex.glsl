@@ -48,6 +48,7 @@
   attribute float aSize;
   attribute float aPhase;
   attribute float aLuma;
+  attribute float aIsHair;
 
   varying float vAlpha;
   // 0 for every particle except the sparse ring dots (uRingMix *
@@ -186,86 +187,23 @@
     float tunnelDepth = aWaveX * uSpiralRadius * 2.4;
     vec3 spiral = vec3(tunnelXY.x, tunnelXY.y, tunnelDepth);
 
-    // The last beat: once Contacts' own email link is centred on screen
-    // (uMorph5, driven by window.__contactFocus — see contacts.tsx), the
-    // tunnel's particles trace a soft rectangular outline around it.
-    // uOutlineRect (left, right, top, bottom, already converted to this
-    // pivot's own local space in JS, matching the email's live screen
-    // rect through the same camera that's rendering this frame) is walked
-    // by arc length rather than a plain 0..1 split across four equal
-    // quarters — the email link is much wider than it is tall, and an
-    // even quarter-split would cram the short edges with as many
-    // particles as the long ones, reading dense on the sides and sparse
-    // top/bottom instead of an even trace.
-    float outlineW = max(uOutlineRect.y - uOutlineRect.x, 0.0001);
-    float outlineH = max(uOutlineRect.z - uOutlineRect.w, 0.0001);
-    float outlinePerim = 2.0 * (outlineW + outlineH);
-    float outlineTopShareRaw = outlineW / outlinePerim;
-    float outlineSideShareRaw = outlineH / outlinePerim;
-    // Blended halfway toward an even quarter-split rather than pure arc
-    // length: the email link is much wider than tall, so a strictly
-    // proportional split leaves the short left/right edges with only a
-    // handful of particles each — few enough that ordinary jitter can
-    // make one look noticeably denser than the other by sampling luck
-    // alone, not because of any actual left/right bias in the math (the
-    // walk itself is symmetric). More particles on the short edges makes
-    // that per-side variance average out instead of standing out.
-    float outlineTopShare = mix(outlineTopShareRaw, 0.25, 0.5);
-    float outlineSideShare = mix(outlineSideShareRaw, 0.25, 0.5);
-    // Offset so the parameter's own wrap point (0 back to 1) lands mid-edge
-    // instead of at a corner: outlineHashA/B below are hashed from
-    // outlineT, and hash(0) != hash(1) even though both land on the exact
-    // same physical point when the wrap sits at a corner (0 and 1 are the
-    // two adjacent edges meeting there) — two unrelated jitter clouds
-    // converging on one spot read as that corner alone looking warped/
-    // bulged, the other three corners (an ordinary shared boundary between
-    // adjacent edges, not the wrap point) don't have this. A mid-edge seam
-    // is the same discontinuity, just hidden inside a straight run instead
-    // of distorting a sharp 90\xb0 corner.
-    float outlineT = fract(aWaveX + 0.5 + outlineTopShare * 0.5);
-    vec2 outlineXY;
-    if (outlineT < outlineTopShare) {
-      float u = outlineT / outlineTopShare;
-      outlineXY = vec2(mix(uOutlineRect.x, uOutlineRect.y, u), uOutlineRect.z);
-    } else if (outlineT < outlineTopShare + outlineSideShare) {
-      float u = (outlineT - outlineTopShare) / outlineSideShare;
-      outlineXY = vec2(uOutlineRect.y, mix(uOutlineRect.z, uOutlineRect.w, u));
-    } else if (outlineT < outlineTopShare * 2.0 + outlineSideShare) {
-      float u = (outlineT - outlineTopShare - outlineSideShare) / outlineTopShare;
-      outlineXY = vec2(mix(uOutlineRect.y, uOutlineRect.x, u), uOutlineRect.w);
-    } else {
-      float u = (outlineT - outlineTopShare * 2.0 - outlineSideShare) / outlineSideShare;
-      outlineXY = vec2(uOutlineRect.x, mix(uOutlineRect.w, uOutlineRect.z, u));
-    }
-    // A little scatter off the exact line, same idea as the helix's own
-    // strand jitter — reads as particles loosely tracing a shape, not a
-    // ruler-drawn rectangle. Hashed from outlineT (position along THIS
-    // shape) rather than reusing aWaveJitter (the DNA's own per-particle
-    // jitter attribute) directly: aWaveJitter was assigned once, per
-    // particle, back when the DNA geometry was generated, uncorrelated
-    // with which edge that particle happens to land on here — for any
-    // one random assignment, the specific particles that land on a given
-    // edge can carry a skewed sample of jitter values purely by chance
-    // (visible as one side looking a little denser or sparser than the
-    // other, confirmed NOT to be a positioning bug — the projection math
-    // checks out exactly). A hash of position along this shape's own
-    // perimeter instead gives every edge an independent, evenly-spread
-    // scatter field that doesn't inherit whatever the DNA's own
-    // generation-time randomness happened to produce.
-    float outlineHashA = fract(sin(outlineT * 127.1 + 7.3) * 43758.5453);
-    float outlineHashB = fract(sin(outlineT * 269.5 + 3.7) * 24634.6345);
-    float outlineJitterX = outlineHashA * 2.0 - 1.0;
-    float outlineJitterY = outlineHashB * 2.0 - 1.0;
-    float outlinePad = 0.06 * max(outlineW, outlineH);
-    vec3 outline = vec3(
-      outlineXY + vec2(outlineJitterX, outlineJitterY) * outlinePad * 0.4,
-      outlineJitterX * outlinePad * 0.5
+    // The closing beat (uMorph5, active at the end in Contact & Transmission):
+    // A majestic, continuous 3D particle vortex and undulating cosmic constellation field!
+    // Never static: continuously spins with uTime, undulates in 3D waves, and expands across the viewport.
+    float vortexArm = aWaveCurve * 3.14159265;
+    float vortexAngle = aWaveX * 14.0 + uTime * 0.7 + vortexArm + aWaveJitter * 0.25;
+    float vortexRad = (0.35 + abs(aWaveX) * 1.85) * (1.0 + 0.16 * sin(uTime * 1.8 + aWaveX * 10.0));
+    float vortexZ = sin(vortexRad * 4.5 - uTime * 2.4 + aWaveJitter * 2.0) * 0.35 + cos(vortexAngle * 2.0 + uTime * 0.8) * 0.15;
+    vec3 vortex = vec3(
+      cos(vortexAngle) * vortexRad * 1.5,
+      sin(vortexAngle) * vortexRad * 1.1 - 0.15,
+      vortexZ
     );
 
     vec3 globeScaled = vec3(aGlobe.x, aGlobe.y - uGlobeCentreY, aGlobe.z) * uGlobeScale + vec3(0.0, uGlobeCentreY, 0.0);
     vec3 italyScaled = vec3(aItaly.x, aItaly.y - uItalyCentreY, aItaly.z) * uItalyScale + vec3(0.0, uItalyCentreY, 0.0);
 
-    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), italyScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), outline, uMorph5);
+    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), italyScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), vortex, uMorph5);
 
     // The preloader's own intro shape (see preloader.tsx, which drives
     // uRingMix from window.__preloaderRingMix): a sparse loading-spinner
@@ -297,6 +235,11 @@
     // readable circle. Flat glow, like every other point in the cloud.
     vRingShade = 0.0;
     vec3 formed = mix(origin, target, formEase);
+    // Subtle organic wind shimmer in hair strands in humanoid bust state
+    float hairSway = aIsHair * formEase * (1.0 - uMorph);
+    formed.x += sin(uTime * 1.8 + formed.y * 10.0 + aPhase) * 0.007 * hairSway;
+    formed.y += cos(uTime * 1.4 + formed.x * 8.0 + aPhase) * 0.005 * hairSway;
+    formed.z += sin(uTime * 2.0 + aPhase) * 0.006 * hairSway;
     formed.z += sin(uTime * 0.7 + aPhase) * 0.012 * formEase;
 
     // Background stars sit frozen at their own raw aOrigin scatter while

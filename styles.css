@@ -1511,9 +1511,36 @@ button {
    SECTION 07: CONTACT & TRANSMISSION
    ========================================================================== */
 
+.contact-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, rgba(59, 130, 246, 0.03) 40%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: contactGlowPulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes contactGlowPulse {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1.0; }
+}
+
 .contact-header-block {
   max-width: 760px;
   margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .contact-heading {

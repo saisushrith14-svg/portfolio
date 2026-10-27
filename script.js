@@ -188,9 +188,10 @@
   // 6. THREE.JS AUTHENTIC HUMAN BUST SCULPTURE & GENERATIVE ENGINE
   //    - Genuine 3D Scanned Human Bust (44,000 Points, PPT1 Surface Point Cloud)
   //    - Anatomically Authentic Cranium, Eyes, Nose, Lips, Ears, Neck, and Broad Shoulders
+  //    - Custom Volumetric Sculpted Hair with Organic Wave Strands & Wind Shimmer
+  //    - Dynamic Living Cosmic Vortex & Particle Galaxy Animation at Website End
   //    - 4-Stage Formation Sequence (Dispersed Emergence -> Coalescence -> Landing -> Idle Shimmer)
   //    - Smooth 3D Head Rotation & Natural Tilt Following Cursor Coordinates
-  //    - Interactive Celestial Orb with Physical Repulsion
   //    - Multi-Stage Scroll Morphing across Portfolio Sections
   // --------------------------------------------------------------------------
 
@@ -250,6 +251,7 @@
   attribute float aSize;
   attribute float aPhase;
   attribute float aLuma;
+  attribute float aIsHair;
 
   varying float vAlpha;
   // 0 for every particle except the sparse ring dots (uRingMix *
@@ -388,86 +390,23 @@
     float tunnelDepth = aWaveX * uSpiralRadius * 2.4;
     vec3 spiral = vec3(tunnelXY.x, tunnelXY.y, tunnelDepth);
 
-    // The last beat: once Contacts' own email link is centred on screen
-    // (uMorph5, driven by window.__contactFocus — see contacts.tsx), the
-    // tunnel's particles trace a soft rectangular outline around it.
-    // uOutlineRect (left, right, top, bottom, already converted to this
-    // pivot's own local space in JS, matching the email's live screen
-    // rect through the same camera that's rendering this frame) is walked
-    // by arc length rather than a plain 0..1 split across four equal
-    // quarters — the email link is much wider than it is tall, and an
-    // even quarter-split would cram the short edges with as many
-    // particles as the long ones, reading dense on the sides and sparse
-    // top/bottom instead of an even trace.
-    float outlineW = max(uOutlineRect.y - uOutlineRect.x, 0.0001);
-    float outlineH = max(uOutlineRect.z - uOutlineRect.w, 0.0001);
-    float outlinePerim = 2.0 * (outlineW + outlineH);
-    float outlineTopShareRaw = outlineW / outlinePerim;
-    float outlineSideShareRaw = outlineH / outlinePerim;
-    // Blended halfway toward an even quarter-split rather than pure arc
-    // length: the email link is much wider than tall, so a strictly
-    // proportional split leaves the short left/right edges with only a
-    // handful of particles each — few enough that ordinary jitter can
-    // make one look noticeably denser than the other by sampling luck
-    // alone, not because of any actual left/right bias in the math (the
-    // walk itself is symmetric). More particles on the short edges makes
-    // that per-side variance average out instead of standing out.
-    float outlineTopShare = mix(outlineTopShareRaw, 0.25, 0.5);
-    float outlineSideShare = mix(outlineSideShareRaw, 0.25, 0.5);
-    // Offset so the parameter's own wrap point (0 back to 1) lands mid-edge
-    // instead of at a corner: outlineHashA/B below are hashed from
-    // outlineT, and hash(0) != hash(1) even though both land on the exact
-    // same physical point when the wrap sits at a corner (0 and 1 are the
-    // two adjacent edges meeting there) — two unrelated jitter clouds
-    // converging on one spot read as that corner alone looking warped/
-    // bulged, the other three corners (an ordinary shared boundary between
-    // adjacent edges, not the wrap point) don't have this. A mid-edge seam
-    // is the same discontinuity, just hidden inside a straight run instead
-    // of distorting a sharp 90\xb0 corner.
-    float outlineT = fract(aWaveX + 0.5 + outlineTopShare * 0.5);
-    vec2 outlineXY;
-    if (outlineT < outlineTopShare) {
-      float u = outlineT / outlineTopShare;
-      outlineXY = vec2(mix(uOutlineRect.x, uOutlineRect.y, u), uOutlineRect.z);
-    } else if (outlineT < outlineTopShare + outlineSideShare) {
-      float u = (outlineT - outlineTopShare) / outlineSideShare;
-      outlineXY = vec2(uOutlineRect.y, mix(uOutlineRect.z, uOutlineRect.w, u));
-    } else if (outlineT < outlineTopShare * 2.0 + outlineSideShare) {
-      float u = (outlineT - outlineTopShare - outlineSideShare) / outlineTopShare;
-      outlineXY = vec2(mix(uOutlineRect.y, uOutlineRect.x, u), uOutlineRect.w);
-    } else {
-      float u = (outlineT - outlineTopShare * 2.0 - outlineSideShare) / outlineSideShare;
-      outlineXY = vec2(uOutlineRect.x, mix(uOutlineRect.w, uOutlineRect.z, u));
-    }
-    // A little scatter off the exact line, same idea as the helix's own
-    // strand jitter — reads as particles loosely tracing a shape, not a
-    // ruler-drawn rectangle. Hashed from outlineT (position along THIS
-    // shape) rather than reusing aWaveJitter (the DNA's own per-particle
-    // jitter attribute) directly: aWaveJitter was assigned once, per
-    // particle, back when the DNA geometry was generated, uncorrelated
-    // with which edge that particle happens to land on here — for any
-    // one random assignment, the specific particles that land on a given
-    // edge can carry a skewed sample of jitter values purely by chance
-    // (visible as one side looking a little denser or sparser than the
-    // other, confirmed NOT to be a positioning bug — the projection math
-    // checks out exactly). A hash of position along this shape's own
-    // perimeter instead gives every edge an independent, evenly-spread
-    // scatter field that doesn't inherit whatever the DNA's own
-    // generation-time randomness happened to produce.
-    float outlineHashA = fract(sin(outlineT * 127.1 + 7.3) * 43758.5453);
-    float outlineHashB = fract(sin(outlineT * 269.5 + 3.7) * 24634.6345);
-    float outlineJitterX = outlineHashA * 2.0 - 1.0;
-    float outlineJitterY = outlineHashB * 2.0 - 1.0;
-    float outlinePad = 0.06 * max(outlineW, outlineH);
-    vec3 outline = vec3(
-      outlineXY + vec2(outlineJitterX, outlineJitterY) * outlinePad * 0.4,
-      outlineJitterX * outlinePad * 0.5
+    // The closing beat (uMorph5, active at the end in Contact & Transmission):
+    // A majestic, continuous 3D particle vortex and undulating cosmic constellation field!
+    // Never static: continuously spins with uTime, undulates in 3D waves, and expands across the viewport.
+    float vortexArm = aWaveCurve * 3.14159265;
+    float vortexAngle = aWaveX * 14.0 + uTime * 0.7 + vortexArm + aWaveJitter * 0.25;
+    float vortexRad = (0.35 + abs(aWaveX) * 1.85) * (1.0 + 0.16 * sin(uTime * 1.8 + aWaveX * 10.0));
+    float vortexZ = sin(vortexRad * 4.5 - uTime * 2.4 + aWaveJitter * 2.0) * 0.35 + cos(vortexAngle * 2.0 + uTime * 0.8) * 0.15;
+    vec3 vortex = vec3(
+      cos(vortexAngle) * vortexRad * 1.5,
+      sin(vortexAngle) * vortexRad * 1.1 - 0.15,
+      vortexZ
     );
 
     vec3 globeScaled = vec3(aGlobe.x, aGlobe.y - uGlobeCentreY, aGlobe.z) * uGlobeScale + vec3(0.0, uGlobeCentreY, 0.0);
     vec3 italyScaled = vec3(aItaly.x, aItaly.y - uItalyCentreY, aItaly.z) * uItalyScale + vec3(0.0, uItalyCentreY, 0.0);
 
-    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), italyScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), outline, uMorph5);
+    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), italyScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), vortex, uMorph5);
 
     // The preloader's own intro shape (see preloader.tsx, which drives
     // uRingMix from window.__preloaderRingMix): a sparse loading-spinner
@@ -499,6 +438,11 @@
     // readable circle. Flat glow, like every other point in the cloud.
     vRingShade = 0.0;
     vec3 formed = mix(origin, target, formEase);
+    // Subtle organic wind shimmer in hair strands in humanoid bust state
+    float hairSway = aIsHair * formEase * (1.0 - uMorph);
+    formed.x += sin(uTime * 1.8 + formed.y * 10.0 + aPhase) * 0.007 * hairSway;
+    formed.y += cos(uTime * 1.4 + formed.x * 8.0 + aPhase) * 0.005 * hairSway;
+    formed.z += sin(uTime * 2.0 + aPhase) * 0.006 * hairSway;
     formed.z += sin(uTime * 0.7 + aPhase) * 0.012 * formEase;
 
     // Background stars sit frozen at their own raw aOrigin scatter while
@@ -637,13 +581,39 @@
       const italyData = italyBuf ? parsePPT1(italyBuf) : null;
       startParticleEngine(portraitData, italyData ? italyData.positions : null);
     }).catch(err => {
-      console.warn("Failed to load binary point cloud assets, fallback to procedural:", err);
+      console.warn("Failed to load binary point cloud assets:", err);
     });
 
     function startParticleEngine(portraitData, italyPositions) {
       let count = portraitData.count;
       let positions = portraitData.positions;
       let luma = portraitData.luma;
+
+      // Sculpt hair with natural volume, textured waves, and layered loft
+      const hairAttribute = new Float32Array(count);
+      for (let t = 0; t < count; t++) {
+        let px = positions[3 * t];
+        let py = positions[3 * t + 1];
+        let pz = positions[3 * t + 2];
+
+        if (py > 0.38 && (pz < 0.12 || py > 0.52)) {
+          const hairHeight = (py - 0.38) / (0.87 - 0.38); // 0 to 1
+          hairAttribute[t] = hairHeight;
+
+          // Natural volumetric crown loft
+          const loft = Math.sin(hairHeight * Math.PI) * 0.045;
+          // Harmonic wave texture for organic hair strands and curls
+          const waveX = Math.sin(py * 24.0 + pz * 18.0) * 0.018 * hairHeight;
+          const waveY = Math.cos(px * 20.0 + pz * 15.0) * 0.015 * hairHeight;
+          const waveZ = Math.sin(px * 16.0 + py * 18.0) * 0.022 * hairHeight;
+
+          positions[3 * t] = px + waveX;
+          positions[3 * t + 1] = py + loft + waveY;
+          positions[3 * t + 2] = pz + waveZ;
+        } else {
+          hairAttribute[t] = 0.0;
+        }
+      }
 
       let width = container.clientWidth || window.innerWidth;
       let height = container.clientHeight || window.innerHeight;
@@ -790,6 +760,7 @@
       geometry.setAttribute("aSize", new THREE.BufferAttribute(aSize, 1));
       geometry.setAttribute("aPhase", new THREE.BufferAttribute(aPhase, 1));
       geometry.setAttribute("aLuma", new THREE.BufferAttribute(luma, 1));
+      geometry.setAttribute("aIsHair", new THREE.BufferAttribute(hairAttribute, 1));
 
       // Shader Material
       const material = new THREE.ShaderMaterial({
@@ -847,6 +818,7 @@
       let currentPointer = new THREE.Vector2(0, 0);
       let pointerActive = 0;
       let pointerTargetActive = 0;
+      let vortexSpin = 0;
 
       const onPointerMove = (e) => {
         const rect = container.getBoundingClientRect();
@@ -950,6 +922,7 @@
         // Scroll morph progression based on viewport height
         const vh = window.innerHeight;
         const scrollRatio = scrollY / vh;
+        const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
 
         // Stage 0 -> 1: Bust to Globe (Section 1 Selected Works)
         const m1 = THREE.MathUtils.clamp(scrollRatio - 0.7, 0, 1);
@@ -976,9 +949,12 @@
         const morph4 = m4 * m4 * (3 - 2 * m4);
         material.uniforms.uMorph4.value = morph4;
 
-        // Stage 5: Contact Outline framing
-        const m5 = THREE.MathUtils.clamp(scrollRatio - 6.2, 0, 1);
-        material.uniforms.uMorph5.value = m5 * m5 * (3 - 2 * m5);
+        // Stage 5: Dynamic Swirling Cosmic Vortex Animation at the end (Contact Section)
+        const endTriggerDist = window.innerHeight * 1.5;
+        const distFromBottom = maxScroll - scrollY;
+        const endProgress = THREE.MathUtils.clamp(1.0 - distFromBottom / endTriggerDist, 0, 1);
+        const morph5 = endProgress * endProgress * (3 - 2 * endProgress);
+        material.uniforms.uMorph5.value = morph5;
 
         // Idle subtle organic head breathing sway
         const idleX = Math.sin(0.16 * time) * 0.12;
@@ -989,9 +965,11 @@
         const maxTurn = 0.22;
 
         const morphFade = 1.0 - morph1;
-        headGroup.rotation.y = (ep(THREE.MathUtils.lerp(idleX, currentPointer.x * headTurn, pointerActive) * formation, maxTurn) - 0.5 * scrollRatio * morphFade) * morphFade;
-        headGroup.rotation.x = ep(THREE.MathUtils.lerp(idleY, -currentPointer.y * headTurn * 0.6, pointerActive) * formation, 0.6 * maxTurn) * morphFade;
-        headGroup.rotation.z = 0.35 * morph3 * (1 - morph4);
+        vortexSpin += dt * 0.35 * morph5;
+
+        headGroup.rotation.y = (ep(THREE.MathUtils.lerp(idleX, currentPointer.x * headTurn, pointerActive) * formation, maxTurn) - 0.5 * scrollRatio * morphFade) * morphFade + vortexSpin * 0.5;
+        headGroup.rotation.x = ep(THREE.MathUtils.lerp(idleY, -currentPointer.y * headTurn * 0.6, pointerActive) * formation, 0.6 * maxTurn) * morphFade + Math.sin(time * 0.8) * 0.1 * morph5;
+        headGroup.rotation.z = 0.35 * morph3 * (1 - morph4) + vortexSpin;
 
         material.uniforms.uPointer.value.copy(currentPointer);
         material.uniforms.uGlow.value = 2.0 * pointerActive;
@@ -1002,8 +980,10 @@
 
         const landingY = -frustumH / 2 - minY * scaleVal + 0.02 * frustumH;
         const morphY = -THREE.MathUtils.lerp(THREE.MathUtils.lerp(V, el, morph2), 0, morph3) * scaleVal;
-        headGroup.position.y = THREE.MathUtils.lerp(landingY, morphY, morph1);
-        headGroup.position.x = -0.22 * morph3 * frustumW;
+        const endY = -0.1 * frustumH;
+        const targetY = THREE.MathUtils.lerp(THREE.MathUtils.lerp(landingY, morphY, morph1), endY, morph5);
+        headGroup.position.y = targetY;
+        headGroup.position.x = -0.22 * morph3 * frustumW * (1.0 - morph5);
 
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
