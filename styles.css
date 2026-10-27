@@ -169,32 +169,33 @@ button {
 }
 
 .cursor-dot {
-  width: 6px;
-  height: 6px;
-  background-color: #FFFFFF;
+  width: 4px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.9);
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
 }
 
 .cursor-ring {
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  transition: width 0.2s, height 0.2s, border-color 0.2s;
+  transition: width 0.15s ease-out, height 0.15s ease-out, border-color 0.15s ease-out;
 }
 
 .custom-cursor.hovering .cursor-ring {
-  width: 48px;
-  height: 48px;
-  border-color: var(--accent-bright);
-  background-color: rgba(10, 38, 238, 0.08);
+  width: 24px;
+  height: 24px;
+  border-color: rgba(255, 255, 255, 0.6);
+  background-color: transparent;
 }
 
 /* ==========================================================================

@@ -835,21 +835,6 @@
       headGroup.add(particlePoints);
       scene.add(headGroup);
 
-      // Interactive Glowing Celestial Light Orb
-      const orbGroup = new THREE.Group();
-      const orbCoreGeom = new THREE.SphereGeometry(1.4, 24, 24);
-      const orbCoreMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.95 });
-      const orbCore = new THREE.Mesh(orbCoreGeom, orbCoreMat);
-      orbGroup.add(orbCore);
-
-      const orbHaloGeom = new THREE.SphereGeometry(3.2, 24, 24);
-      const orbHaloMat = new THREE.MeshBasicMaterial({ color: 0x93C5FD, transparent: true, opacity: 0.35, wireframe: true });
-      const orbHalo = new THREE.Mesh(orbHaloGeom, orbHaloMat);
-      orbGroup.add(orbHalo);
-
-      orbGroup.position.set(1.4, 0.8, 0.4);
-      scene.add(orbGroup);
-
       // Tracking variables
       let lastTime = performance.now();
       let scaleS = 1;
@@ -1019,19 +1004,6 @@
         const morphY = -THREE.MathUtils.lerp(THREE.MathUtils.lerp(V, el, morph2), 0, morph3) * scaleVal;
         headGroup.position.y = THREE.MathUtils.lerp(landingY, morphY, morph1);
         headGroup.position.x = -0.22 * morph3 * frustumW;
-
-        // Interactive celestial orb motion & visibility
-        if (morphFade > 0.05) {
-          orbGroup.visible = true;
-          const targetOrbX = (currentPointer.x * frustumW * 0.35);
-          const targetOrbY = (currentPointer.y * frustumH * 0.35) + 0.4;
-          orbGroup.position.x += (targetOrbX - orbGroup.position.x) * 0.08;
-          orbGroup.position.y += (targetOrbY - orbGroup.position.y) * 0.08;
-          orbGroup.position.z = 0.5 + Math.sin(time * 2.2) * 0.15;
-          orbHalo.scale.setScalar(1.0 + Math.sin(time * 3.0) * 0.12);
-        } else {
-          orbGroup.visible = false;
-        }
 
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
