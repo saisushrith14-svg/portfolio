@@ -877,6 +877,14 @@
         hudParticlesElem.textContent = count.toLocaleString();
       }
 
+      let targetScrollY = window.scrollY;
+      let smoothScrollY = window.scrollY;
+      let lastSmoothScrollY = window.scrollY;
+
+      window.addEventListener("scroll", () => {
+        targetScrollY = window.scrollY;
+      }, { passive: true });
+
       let frameCounter = 0;
       let lastFpsCheck = performance.now();
 
@@ -895,11 +903,14 @@
           lastFpsCheck = now;
         }
 
-        scrollY = window.scrollY;
-        const scrollDelta = Math.abs(scrollY - lastScrollY) / Math.max(dt, 0.001);
-        lastScrollY = scrollY;
+        // Fluid exponential damping for scroll position (eliminates jittery notches)
+        const scrollDamping = 1 - Math.exp(-dt * 7.5);
+        smoothScrollY += (targetScrollY - smoothScrollY) * scrollDamping;
 
-        const turbTarget = THREE.MathUtils.clamp(scrollDelta / 2400, 0, 1);
+        const scrollDelta = Math.abs(smoothScrollY - lastSmoothScrollY) / Math.max(dt, 0.001);
+        lastSmoothScrollY = smoothScrollY;
+
+        const turbTarget = THREE.MathUtils.clamp(scrollDelta / 2000, 0, 1);
         turbulence += (turbTarget - turbulence) * (1 - Math.exp(-dt / 0.15));
         material.uniforms.uTurbulence.value = turbulence;
 
@@ -915,43 +926,43 @@
 
         // State B -> C: Formation progress
         if (material.uniforms.uFormation.value < 1.0) {
-          material.uniforms.uFormation.value = Math.min(material.uniforms.uFormation.value + dt / 2.2, 1.0);
+          material.uniforms.uFormation.value = Math.min(material.uniforms.uFormation.value + dt / 2.0, 1.0);
         }
         const formation = material.uniforms.uFormation.value;
 
-        // Scroll morph progression based on viewport height
+        // Fluid scroll morph progression based on smoothScrollY
         const vh = window.innerHeight;
-        const scrollRatio = scrollY / vh;
+        const smoothScrollRatio = smoothScrollY / vh;
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
 
         // Stage 0 -> 1: Bust to Globe (Section 1 Selected Works)
-        const m1 = THREE.MathUtils.clamp(scrollRatio - 0.7, 0, 1);
+        const m1 = THREE.MathUtils.clamp((smoothScrollRatio - 0.6) / 0.9, 0, 1);
         const morph1 = m1 * m1 * (3 - 2 * m1);
         material.uniforms.uMorph.value = morph1;
 
         // Stage 1 -> 2: Globe to Topological Grid (Section 2 Lab)
-        const m2 = THREE.MathUtils.clamp(scrollRatio - 1.8, 0, 1);
+        const m2 = THREE.MathUtils.clamp((smoothScrollRatio - 1.7) / 0.9, 0, 1);
         const morph2 = m2 * m2 * (3 - 2 * m2);
         material.uniforms.uMorph2.value = morph2;
 
         // Stage 2 -> 3: Topological Grid to Double Helix DNA Wave (Section 3 Career)
-        const m3 = THREE.MathUtils.clamp(scrollRatio - 2.9, 0, 1);
+        const m3 = THREE.MathUtils.clamp((smoothScrollRatio - 2.8) / 0.9, 0, 1);
         const morph3 = m3 * m3 * (3 - 2 * m3);
         material.uniforms.uMorph3.value = morph3;
 
         // Continuous wave slide along X
-        const slideProgress = Math.max(0, scrollRatio - 3.8);
+        const slideProgress = Math.max(0, smoothScrollRatio - 3.7);
         const workSlide = THREE.MathUtils.clamp(slideProgress / 2.5, 0, 1);
         material.uniforms.uWorkSlide.value = workSlide;
 
         // Stage 4: 3D Tunnel Vortex (Section 4 Core & Section 5 Philosophy)
-        const m4 = THREE.MathUtils.clamp(scrollRatio - 4.9, 0, 1);
+        const m4 = THREE.MathUtils.clamp((smoothScrollRatio - 4.8) / 0.9, 0, 1);
         const morph4 = m4 * m4 * (3 - 2 * m4);
         material.uniforms.uMorph4.value = morph4;
 
         // Stage 5: Dynamic Swirling Cosmic Vortex Animation at the end (Contact Section)
         const endTriggerDist = window.innerHeight * 1.5;
-        const distFromBottom = maxScroll - scrollY;
+        const distFromBottom = maxScroll - smoothScrollY;
         const endProgress = THREE.MathUtils.clamp(1.0 - distFromBottom / endTriggerDist, 0, 1);
         const morph5 = endProgress * endProgress * (3 - 2 * endProgress);
         material.uniforms.uMorph5.value = morph5;
@@ -964,26 +975,37 @@
         const headTurn = 0.16;
         const maxTurn = 0.22;
 
-        const morphFade = 1.0 - morph1;
-        vortexSpin += dt * 0.35 * morph5;
+        // morphFade ensures complete pure return to head pose when at the top (smoothScrollRatio -> 0)
+        const morphFade = Math.max(0, 1.0 - morph1 * 1.25);
 
-        headGroup.rotation.y = (ep(THREE.MathUtils.lerp(idleX, currentPointer.x * headTurn, pointerActive) * formation, maxTurn) - 0.5 * scrollRatio * morphFade) * morphFade + vortexSpin * 0.5;
-        headGroup.rotation.x = ep(THREE.MathUtils.lerp(idleY, -currentPointer.y * headTurn * 0.6, pointerActive) * formation, 0.6 * maxTurn) * morphFade + Math.sin(time * 0.8) * 0.1 * morph5;
-        headGroup.rotation.z = 0.35 * morph3 * (1 - morph4) + vortexSpin;
+        // Target rotations for headGroup:
+        // When at top (morphFade = 1, morph5 = 0), targetRot is strictly the pointer-tracking human face!
+        // When scrolling down, rotation transitions smoothly; vortex spin only exists while morph5 > 0.
+        const targetRotY = (ep(THREE.MathUtils.lerp(idleX, currentPointer.x * headTurn, pointerActive) * formation, maxTurn) - 0.45 * smoothScrollRatio * morphFade) * morphFade + (time * 0.22) * morph5;
+        const targetRotX = ep(THREE.MathUtils.lerp(idleY, -currentPointer.y * headTurn * 0.6, pointerActive) * formation, 0.6 * maxTurn) * morphFade + (Math.sin(time * 0.8) * 0.1) * morph5;
+        const targetRotZ = 0.35 * morph3 * (1.0 - morph4) + (time * 0.35) * morph5;
+
+        // Smoothly lerp headGroup rotation so reversals are buttery smooth with zero residual offset
+        const rotEase = 1 - Math.exp(-dt * 8.0);
+        headGroup.rotation.y += (targetRotY - headGroup.rotation.y) * rotEase;
+        headGroup.rotation.x += (targetRotX - headGroup.rotation.x) * rotEase;
+        headGroup.rotation.z += (targetRotZ - headGroup.rotation.z) * rotEase;
 
         material.uniforms.uPointer.value.copy(currentPointer);
         material.uniforms.uGlow.value = 2.0 * pointerActive;
 
-        // Scale & Position bust on landing
-        const scaleVal = scaleS * (1 + scrollRatio * 0.2 * morphFade) * (1 + 0.5 * workSlide);
+        // Scale & Position bust on landing with smooth lerp
+        const scaleVal = scaleS * (1 + smoothScrollRatio * 0.16 * morphFade) * (1 + 0.45 * workSlide);
         headGroup.scale.set(scaleVal, scaleVal, scaleVal);
 
         const landingY = -frustumH / 2 - minY * scaleVal + 0.02 * frustumH;
         const morphY = -THREE.MathUtils.lerp(THREE.MathUtils.lerp(V, el, morph2), 0, morph3) * scaleVal;
         const endY = -0.1 * frustumH;
         const targetY = THREE.MathUtils.lerp(THREE.MathUtils.lerp(landingY, morphY, morph1), endY, morph5);
-        headGroup.position.y = targetY;
-        headGroup.position.x = -0.22 * morph3 * frustumW * (1.0 - morph5);
+        headGroup.position.y += (targetY - headGroup.position.y) * rotEase;
+
+        const targetX = -0.22 * morph3 * frustumW * (1.0 - morph5);
+        headGroup.position.x += (targetX - headGroup.position.x) * rotEase;
 
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
