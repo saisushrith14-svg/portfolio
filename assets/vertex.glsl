@@ -33,12 +33,12 @@
   uniform float uGlobeCentreY;
   // Same idea, Italy shape, scaled around its own vertical centre
   // (uItalyCentreY, italyCentre baked once at setup).
-  uniform float uItalyScale;
-  uniform float uItalyCentreY;
+  uniform float uIndiaScale;
+  uniform float uIndiaCentreY;
 
   attribute vec3 aOrigin;
   attribute vec3 aGlobe;
-  attribute vec3 aItaly;
+  attribute vec3 aIndia;
   attribute float aWaveX;
   attribute float aWaveCurve;
   attribute float aWaveJitter;
@@ -191,9 +191,9 @@
     // A majestic, continuous 3D particle vortex and undulating cosmic constellation field!
     // Never static: continuously spins with uTime, undulates in 3D waves, and expands across the viewport.
     float vortexArm = aWaveCurve * 3.14159265;
-    float vortexAngle = aWaveX * 14.0 + uTime * 0.7 + vortexArm + aWaveJitter * 0.25;
-    float vortexRad = (0.35 + abs(aWaveX) * 1.85) * (1.0 + 0.16 * sin(uTime * 1.8 + aWaveX * 10.0));
-    float vortexZ = sin(vortexRad * 4.5 - uTime * 2.4 + aWaveJitter * 2.0) * 0.35 + cos(vortexAngle * 2.0 + uTime * 0.8) * 0.15;
+    float vortexAngle = aWaveX * 12.0 + uTime * 0.16 + vortexArm + aWaveJitter * 0.2;
+    float vortexRad = (0.35 + abs(aWaveX) * 1.85) * (1.0 + 0.08 * sin(uTime * 0.45 + aWaveX * 8.0));
+    float vortexZ = sin(vortexRad * 3.5 - uTime * 0.5 + aWaveJitter * 2.0) * 0.25 + cos(vortexAngle * 2.0 + uTime * 0.2) * 0.12;
     vec3 vortex = vec3(
       cos(vortexAngle) * vortexRad * 1.5,
       sin(vortexAngle) * vortexRad * 1.1 - 0.15,
@@ -201,9 +201,9 @@
     );
 
     vec3 globeScaled = vec3(aGlobe.x, aGlobe.y - uGlobeCentreY, aGlobe.z) * uGlobeScale + vec3(0.0, uGlobeCentreY, 0.0);
-    vec3 italyScaled = vec3(aItaly.x, aItaly.y - uItalyCentreY, aItaly.z) * uItalyScale + vec3(0.0, uItalyCentreY, 0.0);
+    vec3 indiaScaled = vec3(aIndia.x, aIndia.y - uIndiaCentreY, aIndia.z) * uIndiaScale + vec3(0.0, uIndiaCentreY, 0.0);
 
-    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), italyScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), vortex, uMorph5);
+    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), indiaScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), vortex, uMorph5);
 
     // The preloader's own intro shape (see preloader.tsx, which drives
     // uRingMix from window.__preloaderRingMix): a sparse loading-spinner

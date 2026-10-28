@@ -189,10 +189,9 @@
   //    - Genuine 3D Scanned Human Bust (44,000 Points, PPT1 Surface Point Cloud)
   //    - Anatomically Authentic Cranium, Eyes, Nose, Lips, Ears, Neck, and Broad Shoulders
   //    - Custom Volumetric Sculpted Hair with Organic Wave Strands & Wind Shimmer
-  //    - Dynamic Living Cosmic Vortex & Particle Galaxy Animation at Website End
-  //    - 4-Stage Formation Sequence (Dispersed Emergence -> Coalescence -> Landing -> Idle Shimmer)
-  //    - Smooth 3D Head Rotation & Natural Tilt Following Cursor Coordinates
-  //    - Multi-Stage Scroll Morphing across Portfolio Sections
+  //    - Stage 2: Geographic 3D Point Cloud of INDIA with Pune (Current) & Hyderabad (Origin) Focal Constellations
+  //    - Stage 5: Majestic, Slow-Churning Cosmic Vortex & Constellation Particle Galaxy at Website End
+  //    - Fluid Virtual Scroll Damping & Symmetrical Reversibility
   // --------------------------------------------------------------------------
 
   const container = document.getElementById("threejs-particle-scene");
@@ -236,12 +235,12 @@
   uniform float uGlobeCentreY;
   // Same idea, Italy shape, scaled around its own vertical centre
   // (uItalyCentreY, italyCentre baked once at setup).
-  uniform float uItalyScale;
-  uniform float uItalyCentreY;
+  uniform float uIndiaScale;
+  uniform float uIndiaCentreY;
 
   attribute vec3 aOrigin;
   attribute vec3 aGlobe;
-  attribute vec3 aItaly;
+  attribute vec3 aIndia;
   attribute float aWaveX;
   attribute float aWaveCurve;
   attribute float aWaveJitter;
@@ -394,9 +393,9 @@
     // A majestic, continuous 3D particle vortex and undulating cosmic constellation field!
     // Never static: continuously spins with uTime, undulates in 3D waves, and expands across the viewport.
     float vortexArm = aWaveCurve * 3.14159265;
-    float vortexAngle = aWaveX * 14.0 + uTime * 0.7 + vortexArm + aWaveJitter * 0.25;
-    float vortexRad = (0.35 + abs(aWaveX) * 1.85) * (1.0 + 0.16 * sin(uTime * 1.8 + aWaveX * 10.0));
-    float vortexZ = sin(vortexRad * 4.5 - uTime * 2.4 + aWaveJitter * 2.0) * 0.35 + cos(vortexAngle * 2.0 + uTime * 0.8) * 0.15;
+    float vortexAngle = aWaveX * 12.0 + uTime * 0.16 + vortexArm + aWaveJitter * 0.2;
+    float vortexRad = (0.35 + abs(aWaveX) * 1.85) * (1.0 + 0.08 * sin(uTime * 0.45 + aWaveX * 8.0));
+    float vortexZ = sin(vortexRad * 3.5 - uTime * 0.5 + aWaveJitter * 2.0) * 0.25 + cos(vortexAngle * 2.0 + uTime * 0.2) * 0.12;
     vec3 vortex = vec3(
       cos(vortexAngle) * vortexRad * 1.5,
       sin(vortexAngle) * vortexRad * 1.1 - 0.15,
@@ -404,9 +403,9 @@
     );
 
     vec3 globeScaled = vec3(aGlobe.x, aGlobe.y - uGlobeCentreY, aGlobe.z) * uGlobeScale + vec3(0.0, uGlobeCentreY, 0.0);
-    vec3 italyScaled = vec3(aItaly.x, aItaly.y - uItalyCentreY, aItaly.z) * uItalyScale + vec3(0.0, uItalyCentreY, 0.0);
+    vec3 indiaScaled = vec3(aIndia.x, aIndia.y - uIndiaCentreY, aIndia.z) * uIndiaScale + vec3(0.0, uIndiaCentreY, 0.0);
 
-    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), italyScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), vortex, uMorph5);
+    vec3 shape = mix(mix(mix(mix(mix(position, globeScaled, uMorph), indiaScaled, uMorph2), waveform, uMorph3), spiral, uMorph4), vortex, uMorph5);
 
     // The preloader's own intro shape (see preloader.tsx, which drives
     // uRingMix from window.__preloaderRingMix): a sparse loading-spinner
@@ -575,16 +574,16 @@
     // Load assets asynchronously
     Promise.all([
       fetch("assets/portrait.bin").then(r => r.arrayBuffer()),
-      fetch("assets/italy.bin").then(r => r.arrayBuffer()).catch(() => null)
-    ]).then(([portraitBuf, italyBuf]) => {
+      fetch("assets/india.bin").then(r => r.arrayBuffer()).catch(() => null)
+    ]).then(([portraitBuf, indiaBuf]) => {
       const portraitData = parsePPT1(portraitBuf);
-      const italyData = italyBuf ? parsePPT1(italyBuf) : null;
-      startParticleEngine(portraitData, italyData ? italyData.positions : null);
+      const indiaData = indiaBuf ? parsePPT1(indiaBuf) : null;
+      startParticleEngine(portraitData, indiaData ? indiaData.positions : null);
     }).catch(err => {
       console.warn("Failed to load binary point cloud assets:", err);
     });
 
-    function startParticleEngine(portraitData, italyPositions) {
+    function startParticleEngine(portraitData, indiaPositions) {
       let count = portraitData.count;
       let positions = portraitData.positions;
       let luma = portraitData.luma;
@@ -646,7 +645,7 @@
       const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
       camera.position.z = cameraDistance;
 
-      // Bounding box calculation
+      // Bounding box calculation for humanoid bust
       let maxY = -Infinity, minY = Infinity, minX = Infinity, maxX = -Infinity;
       for (let t = 0; t < count; t++) {
         let px = positions[3 * t];
@@ -679,26 +678,26 @@
         aPhase[t] = Math.random() * Math.PI * 2;
       }
 
-      // Italy / Topological target
-      let aItaly = italyPositions;
-      if (!aItaly || aItaly.length !== count * 3) {
-        aItaly = new Float32Array(3 * count);
+      // India Geographic Point Cloud
+      let aIndia = indiaPositions;
+      if (!aIndia || aIndia.length !== count * 3) {
+        aIndia = new Float32Array(3 * count);
         for (let i = 0; i < count; i++) {
           const u = (i % 200) / 200 * 2 - 1;
           const v = Math.floor(i / 200) / (count / 200) * 2 - 1;
-          aItaly[3 * i] = u * 0.9;
-          aItaly[3 * i + 1] = v * 0.8;
-          aItaly[3 * i + 2] = Math.sin(u * 6.0) * Math.cos(v * 6.0) * 0.12;
+          aIndia[3 * i] = u * 0.9;
+          aIndia[3 * i + 1] = v * 0.8;
+          aIndia[3 * i + 2] = Math.sin(u * 6.0) * Math.cos(v * 6.0) * 0.12;
         }
       }
 
-      let italyMaxY = -Infinity, italyMinY = Infinity;
+      let indiaMaxY = -Infinity, indiaMinY = Infinity;
       for (let t = 0; t < count; t++) {
-        let py = aItaly[3 * t + 1];
-        if (py > italyMaxY) italyMaxY = py;
-        if (py < italyMinY) italyMinY = py;
+        let py = aIndia[3 * t + 1];
+        if (py > indiaMaxY) indiaMaxY = py;
+        if (py < indiaMinY) indiaMinY = py;
       }
-      let el = (italyMaxY + italyMinY) / 2;
+      let indiaCenterY = (indiaMaxY + indiaMinY) / 2;
 
       // Fibonacci Globe
       const aGlobe = new Float32Array(3 * count);
@@ -750,7 +749,7 @@
       geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute("aOrigin", new THREE.BufferAttribute(aOrigin, 3));
       geometry.setAttribute("aGlobe", new THREE.BufferAttribute(aGlobe, 3));
-      geometry.setAttribute("aItaly", new THREE.BufferAttribute(aItaly, 3));
+      geometry.setAttribute("aIndia", new THREE.BufferAttribute(aIndia, 3));
       geometry.setAttribute("aWaveX", new THREE.BufferAttribute(aWaveX, 1));
       geometry.setAttribute("aWaveCurve", new THREE.BufferAttribute(aWaveCurve, 1));
       geometry.setAttribute("aWaveJitter", new THREE.BufferAttribute(aWaveJitter, 1));
@@ -793,8 +792,8 @@
           uIsPortrait: { value: +(width < height) },
           uGlobeScale: { value: width < height ? 0.6 : 1.0 },
           uGlobeCentreY: { value: V },
-          uItalyScale: { value: width < height ? 0.7 : 1.0 },
-          uItalyCentreY: { value: el }
+          uIndiaScale: { value: width < height ? 0.7 : 1.0 },
+          uIndiaCentreY: { value: indiaCenterY }
         },
         transparent: true,
         depthWrite: false,
@@ -811,14 +810,11 @@
       let scaleS = 1;
       let frustumH = 0;
       let frustumW = 0;
-      let scrollY = window.scrollY;
-      let lastScrollY = scrollY;
       let turbulence = 0;
       let pointerNDC = new THREE.Vector2(0, 0);
       let currentPointer = new THREE.Vector2(0, 0);
       let pointerActive = 0;
       let pointerTargetActive = 0;
-      let vortexSpin = 0;
 
       const onPointerMove = (e) => {
         const rect = container.getBoundingClientRect();
@@ -862,7 +858,7 @@
         material.uniforms.uIsPortrait.value = +isPortrait;
         material.uniforms.uRingRadius.value = 0.07 * X;
         material.uniforms.uGlobeScale.value = isPortrait ? 0.6 : 1.0;
-        material.uniforms.uItalyScale.value = isPortrait ? 0.7 : 1.0;
+        material.uniforms.uIndiaScale.value = isPortrait ? 0.7 : 1.0;
 
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
@@ -940,12 +936,12 @@
         const morph1 = m1 * m1 * (3 - 2 * m1);
         material.uniforms.uMorph.value = morph1;
 
-        // Stage 1 -> 2: Globe to Topological Grid (Section 2 Lab)
+        // Stage 1 -> 2: Globe to 3D Map of INDIA (Section 2 Lab / Location)
         const m2 = THREE.MathUtils.clamp((smoothScrollRatio - 1.7) / 0.9, 0, 1);
         const morph2 = m2 * m2 * (3 - 2 * m2);
         material.uniforms.uMorph2.value = morph2;
 
-        // Stage 2 -> 3: Topological Grid to Double Helix DNA Wave (Section 3 Career)
+        // Stage 2 -> 3: India Map to Double Helix DNA Wave (Section 3 Career)
         const m3 = THREE.MathUtils.clamp((smoothScrollRatio - 2.8) / 0.9, 0, 1);
         const morph3 = m3 * m3 * (3 - 2 * m3);
         material.uniforms.uMorph3.value = morph3;
@@ -960,8 +956,8 @@
         const morph4 = m4 * m4 * (3 - 2 * m4);
         material.uniforms.uMorph4.value = morph4;
 
-        // Stage 5: Dynamic Swirling Cosmic Vortex Animation at the end (Contact Section)
-        const endTriggerDist = window.innerHeight * 1.5;
+        // Stage 5: Calm, Majestic Swirling Cosmic Vortex Animation at the end (Contact Section)
+        const endTriggerDist = window.innerHeight * 2.2;
         const distFromBottom = maxScroll - smoothScrollY;
         const endProgress = THREE.MathUtils.clamp(1.0 - distFromBottom / endTriggerDist, 0, 1);
         const morph5 = endProgress * endProgress * (3 - 2 * endProgress);
@@ -978,12 +974,10 @@
         // morphFade ensures complete pure return to head pose when at the top (smoothScrollRatio -> 0)
         const morphFade = Math.max(0, 1.0 - morph1 * 1.25);
 
-        // Target rotations for headGroup:
-        // When at top (morphFade = 1, morph5 = 0), targetRot is strictly the pointer-tracking human face!
-        // When scrolling down, rotation transitions smoothly; vortex spin only exists while morph5 > 0.
-        const targetRotY = (ep(THREE.MathUtils.lerp(idleX, currentPointer.x * headTurn, pointerActive) * formation, maxTurn) - 0.45 * smoothScrollRatio * morphFade) * morphFade + (time * 0.22) * morph5;
-        const targetRotX = ep(THREE.MathUtils.lerp(idleY, -currentPointer.y * headTurn * 0.6, pointerActive) * formation, 0.6 * maxTurn) * morphFade + (Math.sin(time * 0.8) * 0.1) * morph5;
-        const targetRotZ = 0.35 * morph3 * (1.0 - morph4) + (time * 0.35) * morph5;
+        // Calm, gentle rotation rates at the end (slowed down from rapid spinning)
+        const targetRotY = (ep(THREE.MathUtils.lerp(idleX, currentPointer.x * headTurn, pointerActive) * formation, maxTurn) - 0.45 * smoothScrollRatio * morphFade) * morphFade + (time * 0.05) * morph5;
+        const targetRotX = ep(THREE.MathUtils.lerp(idleY, -currentPointer.y * headTurn * 0.6, pointerActive) * formation, 0.6 * maxTurn) * morphFade + (Math.sin(time * 0.3) * 0.04) * morph5;
+        const targetRotZ = 0.35 * morph3 * (1.0 - morph4) + (time * 0.08) * morph5;
 
         // Smoothly lerp headGroup rotation so reversals are buttery smooth with zero residual offset
         const rotEase = 1 - Math.exp(-dt * 8.0);
@@ -999,7 +993,7 @@
         headGroup.scale.set(scaleVal, scaleVal, scaleVal);
 
         const landingY = -frustumH / 2 - minY * scaleVal + 0.02 * frustumH;
-        const morphY = -THREE.MathUtils.lerp(THREE.MathUtils.lerp(V, el, morph2), 0, morph3) * scaleVal;
+        const morphY = -THREE.MathUtils.lerp(THREE.MathUtils.lerp(V, indiaCenterY, morph2), 0, morph3) * scaleVal;
         const endY = -0.1 * frustumH;
         const targetY = THREE.MathUtils.lerp(THREE.MathUtils.lerp(landingY, morphY, morph1), endY, morph5);
         headGroup.position.y += (targetY - headGroup.position.y) * rotEase;
