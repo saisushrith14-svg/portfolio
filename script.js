@@ -130,35 +130,29 @@
   sections.forEach(sec => sectionObserver.observe(sec));
 
   // --------------------------------------------------------------------------
-  // 4. Deterministic Monochromatic GitHub Activity Grid
+  // 4. Authentic Interactive GitHub Contribution Tooltip
   // --------------------------------------------------------------------------
-  const activityGrid = document.getElementById('activity-grid');
-  if (activityGrid) {
-    const totalWeeks = 38;
-    const daysPerWeek = 7;
-    const totalCells = totalWeeks * daysPerWeek;
-    const shades = ['shade-0', 'shade-1', 'shade-2', 'shade-3', 'shade-4'];
+  const contribCells = document.querySelectorAll('.contrib-day-cell');
+  if (contribCells.length > 0) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'contrib-floating-tooltip';
+    document.body.appendChild(tooltip);
 
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < totalCells; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'activity-cell';
+    contribCells.forEach(cell => {
+      cell.addEventListener('mouseenter', () => {
+        const tip = cell.getAttribute('data-tip');
+        if (!tip) return;
+        tooltip.textContent = tip;
+        const rect = cell.getBoundingClientRect();
+        tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+        tooltip.style.top = rect.top + 'px';
+        tooltip.classList.add('visible');
+      });
 
-      // Deterministic pseudo-random generation
-      const seed = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
-      const rand = seed - Math.floor(seed);
-
-      let shadeIndex = 0;
-      if (rand > 0.40) shadeIndex = 1;
-      if (rand > 0.65) shadeIndex = 2;
-      if (rand > 0.84) shadeIndex = 3;
-      if (rand > 0.94) shadeIndex = 4;
-
-      cell.classList.add(shades[shadeIndex]);
-      cell.setAttribute('title', `Cadence Sample [Day ${i + 1}] — Activity Level ${shadeIndex}`);
-      fragment.appendChild(cell);
-    }
-    activityGrid.appendChild(fragment);
+      cell.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+    });
   }
 
   // --------------------------------------------------------------------------

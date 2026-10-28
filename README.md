@@ -60,6 +60,7 @@ You can open `index.html` directly in any modern browser (Chrome, Edge, Safari, 
 - **Confirmed Programming Languages**: Python, C++, Java
 - **Confirmed Degree**: B.Tech in Computer Science and Engineering (Artificial Intelligence and Machine Learning)
 - **Email**: `saisushrith14@gmail.com`
-- **GitHub**: `https://github.com/saisushrith14-svg`
+- **GitHub**:  (142 contributions in the last year)
+- **LinkedIn**: `https://github.com/saisushrith14-svg`
 
-*Note: Missing institutional graduation timeline, LinkedIn URL, and individual course skills are marked as explicit placeholders as requested.*
+*Note: Missing institutional graduation timeline and individual course skills are marked as explicit placeholders as requested.*
