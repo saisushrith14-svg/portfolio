@@ -421,13 +421,20 @@ button {
   pointer-events: auto;
 }
 
+.hero-left-col {
+  max-width: 320px;
+}
+
 .hero-right-col {
   text-align: right;
+  max-width: 340px;
+  margin-left: auto;
 }
 
 @media (max-width: 900px) {
   .hero-right-col {
     text-align: left;
+    margin-left: 0;
   }
 }
 
@@ -449,11 +456,11 @@ button {
 }
 
 .landing-subtitle {
-  font-size: clamp(1.85rem, 2.6vw, 2.5rem);
+  font-size: clamp(1.4rem, 2vw, 2.1rem);
   font-weight: 300;
   letter-spacing: -0.025em;
   color: #C6C6CC;
-  line-height: 1.15;
+  line-height: 1.25;
 }
 
 /* Bottom Bar */
