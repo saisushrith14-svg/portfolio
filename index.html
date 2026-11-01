@@ -18,9 +18,27 @@
   <!-- Separate Vanilla CSS -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-preloading="true">
   <!-- Accessibility Skip Link -->
   <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Architectural Preloader Overlay (Daniel Ingrassia Reference) -->
+  <aside id="preloader-overlay" class="preloader-overlay" aria-label="System Initialization" aria-live="polite">
+    <div class="preloader-content">
+      <div class="preloader-telemetry-badge">
+        <span class="status-pulse-dot" aria-hidden="true"></span>
+        <span class="preloader-telemetry-label">INITIALIZING SYSTEM // 00</span>
+      </div>
+      <div class="preloader-counter-wrap">
+        <span id="preloader-count" class="preloader-count" data-entered="false">0%</span>
+      </div>
+      <div class="preloader-subtext">
+        <span class="mono-badge">[ 18.5204° N — 73.8567° E ]</span>
+        <span class="preloader-sub-divider">•</span>
+        <span class="preloader-sub-tag">SAI SUSHRITH — PORTFOLIO</span>
+      </div>
+    </div>
+  </aside>
 
   <!-- Custom Architectural Desktop Cursor -->
   <div id="custom-cursor" class="custom-cursor" aria-hidden="true">

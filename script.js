@@ -14,6 +14,108 @@
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+  // Initialize Preloader State in global scope for Three.js engine handshake
+  window.__preloaderRingMix = prefersReducedMotion ? 0.0 : 1.0;
+  window.__preloaderActive = !prefersReducedMotion;
+
+  // Seamless Preloader Orchestration
+  const preloaderOverlay = document.getElementById('preloader-overlay');
+  const preloaderCountElem = document.getElementById('preloader-count');
+
+  if (preloaderOverlay && preloaderCountElem && !prefersReducedMotion) {
+    document.body.dataset.preloading = 'true';
+    window.scrollTo(0, 0);
+
+    const preventScroll = (e) => {
+      if (e.cancelable) e.preventDefault();
+    };
+    const blockKeys = new Set([' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End']);
+    const preventKeyScroll = (e) => {
+      if (blockKeys.has(e.key)) e.preventDefault();
+    };
+
+    window.addEventListener('wheel', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventScroll, { passive: false });
+    window.addEventListener('keydown', preventKeyScroll, { passive: false });
+
+    // Step 1: Reveal counter unblurred after initial ring formation settles
+    setTimeout(() => {
+      preloaderCountElem.setAttribute('data-entered', 'true');
+    }, 180);
+
+    // Step 2: Smooth progressive counter animation with cubic easing (1.5 seconds)
+    const countStartTime = performance.now() + 200;
+    const countDuration = 1500;
+
+    const updateCounter = (now) => {
+      if (now < countStartTime) {
+        requestAnimationFrame(updateCounter);
+        return;
+      }
+
+      const elapsed = Math.min((now - countStartTime) / countDuration, 1.0);
+      // Cubic acceleration + smooth arrival
+      const progressEased = elapsed < 0.5
+        ? 4 * elapsed * elapsed * elapsed
+        : 1 - Math.pow(-2 * elapsed + 2, 3) / 2;
+
+      const currentPercent = Math.min(Math.round(progressEased * 100), 100);
+      preloaderCountElem.textContent = `${currentPercent}%`;
+
+      if (elapsed < 1.0) {
+        requestAnimationFrame(updateCounter);
+      } else {
+        // Step 3: Counter reached 100% -> Hold briefly, then fade counter out
+        setTimeout(() => {
+          preloaderCountElem.setAttribute('data-fading', 'true');
+
+          // Step 4: Seamless hand-off from particle ring to humanoid bust
+          setTimeout(() => {
+            const handoffStartTime = performance.now();
+            const handoffDuration = 1200; // Smooth ring dissolve
+
+            const transitionRing = (time) => {
+              const ringProgress = Math.min((time - handoffStartTime) / handoffDuration, 1.0);
+              const ringEase = ringProgress < 0.5
+                ? 4 * ringProgress * ringProgress * ringProgress
+                : 1 - Math.pow(-2 * ringProgress + 2, 3) / 2;
+
+              window.__preloaderRingMix = Math.max(0, 1.0 - ringEase);
+
+              if (ringProgress < 1.0) {
+                requestAnimationFrame(transitionRing);
+              } else {
+                window.__preloaderRingMix = 0.0;
+                window.__preloaderActive = false;
+              }
+            };
+            requestAnimationFrame(transitionRing);
+
+            // Step 5: Dismiss overlay and unlock UI & scroll
+            preloaderOverlay.setAttribute('data-dismissing', 'true');
+            document.body.dataset.preloading = 'false';
+
+            window.removeEventListener('wheel', preventScroll);
+            window.removeEventListener('touchmove', preventScroll);
+            window.removeEventListener('keydown', preventKeyScroll);
+
+            setTimeout(() => {
+              preloaderOverlay.remove();
+            }, 850);
+          }, 280);
+        }, 320);
+      }
+    };
+
+    requestAnimationFrame(updateCounter);
+  } else {
+    // Immediate fallback for prefers-reduced-motion
+    if (preloaderOverlay) preloaderOverlay.remove();
+    document.body.dataset.preloading = 'false';
+    window.__preloaderRingMix = 0.0;
+    window.__preloaderActive = false;
+  }
+
   // --------------------------------------------------------------------------
   // 2. Custom Desktop Cursor
   // --------------------------------------------------------------------------
@@ -769,7 +871,7 @@
           uMorph3: { value: 0 },
           uMorph4: { value: 0 },
           uMorph5: { value: 0 },
-          uRingMix: { value: 0 },
+          uRingMix: { value: window.__preloaderRingMix ?? 0 },
           uRingRadius: { value: 0.1 * X },
           uOutlineRect: { value: new THREE.Vector4(0, 0, 0, 0) },
           uWaveformWidth: { value: 0 },
@@ -914,6 +1016,10 @@
         currentPointer.y = THREE.MathUtils.clamp(currentPointer.y, -1, 1);
         pointerActive += (pointerTargetActive - pointerActive) * (pointerTargetActive > pointerActive ? followSpeed : settleSpeed);
 
+        // Sync preloader ring mix from window orchestration
+        const ringMix = window.__preloaderRingMix ?? 0;
+        material.uniforms.uRingMix.value = ringMix;
+
         // State B -> C: Formation progress
         if (material.uniforms.uFormation.value < 1.0) {
           material.uniforms.uFormation.value = Math.min(material.uniforms.uFormation.value + dt / 2.0, 1.0);
@@ -989,10 +1095,13 @@
         const landingY = -frustumH / 2 - minY * scaleVal + 0.02 * frustumH;
         const morphY = -THREE.MathUtils.lerp(THREE.MathUtils.lerp(V, indiaCenterY, morph2), 0, morph3) * scaleVal;
         const endY = -0.1 * frustumH;
-        const targetY = THREE.MathUtils.lerp(THREE.MathUtils.lerp(landingY, morphY, morph1), endY, morph5);
+        // In preloader state (ringMix > 0), center headGroup perfectly at origin (0, 0) for symmetrical alignment
+        const baseTargetY = THREE.MathUtils.lerp(THREE.MathUtils.lerp(landingY, morphY, morph1), endY, morph5);
+        const targetY = THREE.MathUtils.lerp(baseTargetY, 0, ringMix);
         headGroup.position.y += (targetY - headGroup.position.y) * rotEase;
 
-        const targetX = -0.22 * morph3 * frustumW * (1.0 - morph5);
+        const baseTargetX = -0.22 * morph3 * frustumW * (1.0 - morph5);
+        const targetX = THREE.MathUtils.lerp(baseTargetX, 0, ringMix);
         headGroup.position.x += (targetX - headGroup.position.x) * rotEase;
 
         renderer.render(scene, camera);
